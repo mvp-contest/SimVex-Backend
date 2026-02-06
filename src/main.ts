@@ -5,6 +5,9 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Enable CORS for all origins
+  app.enableCors();
+
   const swaggerDoc = new DocumentBuilder()
     .setTitle('SimVex API')
     .setVersion('1.0')

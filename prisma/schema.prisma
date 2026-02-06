@@ -1,0 +1,180 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model - Basic authentication info
+model User {
+  id          String       @id @default(uuid()) @db.Uuid
+  personalId  String       @unique @map("personal_id") @db.VarChar(50)
+  email       String       @unique @db.VarChar(255)
+  password    String       @db.VarChar(255)
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  profile        UserProfile?
+  teamMembers    TeamMember[]
+  projectMembers ProjectMember[]
+  messages       Message[]
+  assistants     Assistant[]
+
+  @@map("users")
+}
+
+// UserProfile model - User profile information
+model UserProfile {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @unique @map("user_id") @db.Uuid
+  nickname  String   @db.VarChar(100)
+  aboutUs   String?  @map("about_us") @db.Text
+  avatar    String?  @db.VarChar(500)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_profiles")
+}
+
+// Team model
+model Team {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  members  TeamMember[]
+  projects Project[]
+  chats    Chat[]
+
+  @@map("teams")
+}
+
+// TeamMember model - Many-to-many relationship between Team and User
+model TeamMember {
+  id        String   @id @default(uuid()) @db.Uuid
+  teamId    String   @map("team_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  role      Int      @default(2) @db.SmallInt // 0: owner, 1: admin, 2: member
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@map("team_members")
+}
+
+// Project model - 3D model/learning project
+model Project {
+  id        String   @id @default(uuid()) @db.Uuid
+  teamId    String   @map("team_id") @db.Uuid
+  name      String   @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  team    Team             @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  members ProjectMember[]
+  chats   Chat[]
+
+  @@map("projects")
+}
+
+// ProjectMember model - Many-to-many relationship between Project and User
+model ProjectMember {
+  id        String   @id @default(uuid()) @db.Uuid
+  projectId String   @map("project_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  role      Int      @default(2) @db.SmallInt // 0: owner, 1: admin, 2: member
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@map("project_members")
+}
+
+// Chat model - Team or project chat
+model Chat {
+  id        String   @id @default(uuid()) @db.Uuid
+  teamId    String   @map("team_id") @db.Uuid
+  projectId String?  @map("project_id") @db.Uuid // Optional - project-specific chat
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  team     Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  project  Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@map("chats")
+}
+
+// Message model - Chat messages
+model Message {
+  id        String   @id @default(uuid()) @db.Uuid
+  chatId    String   @map("chat_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid // 0: System, 1: AI (using special UUIDs)
+  content   String   @db.Text
+  targetId  String?  @map("target_id") @db.Uuid // Optional - reply to specific message
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  chat         Chat      @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetMessage Message? @relation("MessageReplies", fields: [targetId], references: [id], onDelete: SetNull)
+  replies      Message[] @relation("MessageReplies")
+
+  @@map("messages")
+}
+
+// Assistant model - AI assistant for users
+model Assistant {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questions Question[]
+  answers   Answer[]
+
+  @@map("assistants")
+}
+
+// Question model - User questions to assistant
+model Question {
+  id          String   @id @default(uuid()) @db.Uuid
+  assistantId String   @map("assistant_id") @db.Uuid
+  content     String   @db.Text
+  nodeName    String?  @map("node_name") @db.VarChar(255) // Optional - 3D hierarchy node name
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  assistant Assistant @relation(fields: [assistantId], references: [id], onDelete: Cascade)
+
+  @@map("questions")
+}
+
+// Answer model - Assistant answers
+model Answer {
+  id          String   @id @default(uuid()) @db.Uuid
+  assistantId String   @map("assistant_id") @db.Uuid
+  content     String   @db.Text
+  nodeName    String?  @map("node_name") @db.VarChar(255) // Optional - 3D hierarchy node name
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  assistant Assistant @relation(fields: [assistantId], references: [id], onDelete: Cascade)
+
+  @@map("answers")
+}
