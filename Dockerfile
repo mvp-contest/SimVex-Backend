@@ -18,16 +18,16 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
+RUN apk add --no-cache openssl
+
 COPY package.json package-lock.json ./
-RUN npm ci --only=production --legacy-peer-deps --ignore-scripts
+RUN npm ci --only=production --legacy-peer-deps
 
 COPY --from=build /app/dist ./dist
-COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=build /app/node_modules/@prisma ./node_modules/@prisma
 COPY prisma ./prisma
 
-EXPOSE 8000
+RUN npx prisma generate
 
-USER node
+EXPOSE 8000
 
 CMD sh -c "npx prisma migrate deploy && node dist/main"
