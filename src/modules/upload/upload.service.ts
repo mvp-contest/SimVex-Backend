@@ -20,8 +20,11 @@ export class UploadService {
         )!,
       },
     });
-    this.bucketName = this.configService.get<string>('R2_BUCKET_NAME')!;
-    this.cdnUrl = this.configService.get<string>('CDN_URL')!;
+    this.bucketName =
+      this.configService.get<string>('R2_BUCKET_NAME') || 'simvex';
+    this.cdnUrl =
+      this.configService.get<string>('CDN_URL') ||
+      this.configService.get<string>('R2_PUBLIC_URL')!;
   }
 
   async uploadFile(file: Express.Multer.File, folder: string): Promise<string> {
