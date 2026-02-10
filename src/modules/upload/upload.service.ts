@@ -38,17 +38,30 @@ export class UploadService {
     return `${this.cdnUrl}/${fileName}`;
   }
 
+  async uploadGlbFiles(
+    glbFiles: Express.Multer.File[],
+    projectId: string,
+  ): Promise<string> {
+    const uploadPromises = glbFiles.map((file) =>
+      this.uploadFile(file, `projects/${projectId}/models`),
+    );
+
+    await Promise.all(uploadPromises);
+
+    return `${this.cdnUrl}/projects/${projectId}/models`;
+  }
+
   async uploadProjectFiles(
-    modelFiles: Express.Multer.File[],
-    jsonFile: Express.Multer.File,
+    glbFiles: Express.Multer.File[],
+    metaData: Express.Multer.File,
     projectId: string,
   ): Promise<{ modelFolderUrl: string; jsonFileUrl: string }> {
-    const uploadPromises = modelFiles.map((file) =>
+    const uploadPromises = glbFiles.map((file) =>
       this.uploadFile(file, `projects/${projectId}/models`),
     );
 
     const jsonFilePromise = this.uploadFile(
-      jsonFile,
+      metaData,
       `projects/${projectId}/data`,
     );
 

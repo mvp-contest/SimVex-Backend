@@ -24,13 +24,13 @@ export class ProjectController {
 
   @Post()
   @ApiOperation({
-    summary: 'Create project with multiple 3D model files and JSON file',
+    summary: 'Create project with .glb files and meta_data.json',
   })
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(
     FileFieldsInterceptor([
-      { name: 'modelFiles', maxCount: 50 },
-      { name: 'jsonFile', maxCount: 1 },
+      { name: 'glbFiles', maxCount: 50 },
+      { name: 'metaData', maxCount: 1 },
     ]),
   )
   create(
@@ -38,16 +38,46 @@ export class ProjectController {
     @Body('creatorId') creatorId: string,
     @UploadedFiles()
     files: {
-      modelFiles?: Express.Multer.File[];
-      jsonFile?: Express.Multer.File[];
+      glbFiles?: Express.Multer.File[];
+      metaData?: Express.Multer.File[];
     },
   ) {
     return this.projectService.create(
       createProjectDto,
       creatorId,
-      files?.modelFiles,
-      files?.jsonFile?.[0],
+      files?.glbFiles,
+      files?.metaData?.[0],
     );
+  }
+
+  @Post(':id/files')
+  @ApiOperation({ summary: 'Upload additional files to project' })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'glbFiles', maxCount: 50 },
+      { name: 'metaData', maxCount: 1 },
+    ]),
+  )
+  uploadFiles(
+    @Param('id') id: string,
+    @UploadedFiles()
+    files: {
+      glbFiles?: Express.Multer.File[];
+      metaData?: Express.Multer.File[];
+    },
+  ) {
+    return this.projectService.uploadFiles(
+      id,
+      files?.glbFiles,
+      files?.metaData?.[0],
+    );
+  }
+
+  @Get(':id/files')
+  @ApiOperation({ summary: 'Get project file URLs' })
+  getFiles(@Param('id') id: string) {
+    return this.projectService.getFiles(id);
   }
 
   @Get('user/:userId')

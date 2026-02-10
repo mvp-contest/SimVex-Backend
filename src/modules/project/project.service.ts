@@ -16,8 +16,8 @@ export class ProjectService {
   async create(
     createProjectDto: CreateProjectDto,
     creatorId: string,
-    modelFiles?: Express.Multer.File[],
-    jsonFile?: Express.Multer.File,
+    glbFiles?: Express.Multer.File[],
+    metaData?: Express.Multer.File,
   ) {
     const project = await this.prisma.project.create({
       data: {
@@ -47,11 +47,11 @@ export class ProjectService {
       },
     });
 
-    if (modelFiles?.length && jsonFile) {
+    if (glbFiles?.length && metaData) {
       const { modelFolderUrl, jsonFileUrl } =
         await this.uploadService.uploadProjectFiles(
-          modelFiles,
-          jsonFile,
+          glbFiles,
+          metaData,
           project.id,
         );
 
@@ -78,6 +78,53 @@ export class ProjectService {
         },
       });
     }
+
+    return project;
+  }
+
+  async uploadFiles(
+    projectId: string,
+    glbFiles?: Express.Multer.File[],
+    metaData?: Express.Multer.File,
+  ) {
+    if (glbFiles?.length || metaData) {
+      const updateData: any = {};
+
+      if (glbFiles?.length) {
+        const modelFolderUrl = await this.uploadService.uploadGlbFiles(
+          glbFiles,
+          projectId,
+        );
+        updateData.modelFolderUrl = modelFolderUrl;
+      }
+
+      if (metaData) {
+        const jsonFileUrl = await this.uploadService.uploadFile(
+          metaData,
+          `projects/${projectId}/data`,
+        );
+        updateData.jsonFileUrl = jsonFileUrl;
+      }
+
+      return this.prisma.project.update({
+        where: { id: projectId },
+        data: updateData,
+      });
+    }
+
+    return this.prisma.project.findUnique({ where: { id: projectId } });
+  }
+
+  async getFiles(projectId: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: {
+        id: true,
+        name: true,
+        modelFolderUrl: true,
+        jsonFileUrl: true,
+      },
+    });
 
     return project;
   }
