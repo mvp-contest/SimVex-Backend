@@ -35,7 +35,8 @@ export class ProjectController {
     ]),
   )
   create(
-    @Body() createProjectDto: CreateProjectDto,
+    @Body('teamId') teamId: string,
+    @Body('name') name: string,
     @Body('creatorId') creatorId: string,
     @UploadedFiles()
     files: {
@@ -44,7 +45,7 @@ export class ProjectController {
     },
   ) {
     return this.projectService.create(
-      createProjectDto,
+      { teamId, name },
       creatorId,
       files?.glbFiles,
       files?.metaData?.[0],
