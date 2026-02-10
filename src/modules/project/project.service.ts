@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
 import { CreateProjectDto } from './dto/create-project.dto';
@@ -48,19 +48,15 @@ export class ProjectService {
     });
 
     if (glbFiles?.length && metaData) {
-      const { modelFolderUrl, jsonFileUrl } =
-        await this.uploadService.uploadProjectFiles(
-          glbFiles,
-          metaData,
-          project.id,
-        );
+      const folderUrl = await this.uploadService.uploadProjectFiles(
+        glbFiles,
+        metaData,
+        project.id,
+      );
 
       return this.prisma.project.update({
         where: { id: project.id },
-        data: {
-          modelFolderUrl,
-          jsonFileUrl,
-        },
+        data: { folderUrl },
         include: {
           members: {
             include: {
@@ -88,27 +84,21 @@ export class ProjectService {
     metaData?: Express.Multer.File,
   ) {
     if (glbFiles?.length || metaData) {
-      const updateData: any = {};
+      const folder = `projects/${projectId}`;
 
       if (glbFiles?.length) {
-        const modelFolderUrl = await this.uploadService.uploadGlbFiles(
-          glbFiles,
-          projectId,
-        );
-        updateData.modelFolderUrl = modelFolderUrl;
+        await this.uploadService.uploadGlbFiles(glbFiles, projectId);
       }
 
       if (metaData) {
-        const jsonFileUrl = await this.uploadService.uploadFile(
-          metaData,
-          `projects/${projectId}`,
-        );
-        updateData.jsonFileUrl = jsonFileUrl;
+        await this.uploadService.uploadFileWithOriginalName(metaData, folder);
       }
 
       return this.prisma.project.update({
         where: { id: projectId },
-        data: updateData,
+        data: {
+          folderUrl: this.uploadService.getFolderUrl(folder),
+        },
       });
     }
 
@@ -116,17 +106,53 @@ export class ProjectService {
   }
 
   async getFiles(projectId: string) {
-    const project = await this.prisma.project.findUnique({
+    return this.prisma.project.findUnique({
       where: { id: projectId },
       select: {
         id: true,
         name: true,
-        modelFolderUrl: true,
-        jsonFileUrl: true,
+        folderUrl: true,
       },
     });
+  }
 
-    return project;
+  async getNodeData(projectId: string, nodeName: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { folderUrl: true },
+    });
+
+    if (!project?.folderUrl) {
+      throw new NotFoundException('Project or folder not found');
+    }
+
+    const metaDataUrl = `${project.folderUrl}/meta_data.json`;
+    const response = await fetch(metaDataUrl);
+
+    if (!response.ok) {
+      throw new NotFoundException('meta_data.json not found');
+    }
+
+    const metaData = await response.json();
+
+    if (!(nodeName in metaData)) {
+      throw new NotFoundException(`Node '${nodeName}' not found`);
+    }
+
+    return metaData[nodeName];
+  }
+
+  async askNodeQuestion(projectId: string, nodeName: string, content: string) {
+    const response = await fetch(
+      `http://simvex-ai.dokploy.byeolki.me/assistant/${projectId}/${nodeName}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content }),
+      },
+    );
+
+    return response.json();
   }
 
   async findAll(userId: string) {

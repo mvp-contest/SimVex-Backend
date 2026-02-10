@@ -71,8 +71,7 @@ model Project {
   id             String    @id @default(uuid()) @db.Uuid
   teamId         String    @map("team_id") @db.Uuid
   name           String    @db.VarChar(255)
-  modelFolderUrl String?   @map("model_folder_url") @db.VarChar(500)
-  jsonFileUrl    String?   @map("json_file_url") @db.VarChar(500)
+  folderUrl      String?   @map("folder_url") @db.VarChar(500)
   lastAccessedAt DateTime? @map("last_accessed_at") @db.Timestamptz(6)
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)

@@ -16,6 +16,7 @@ import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { AddProjectMemberDto } from './dto/add-member.dto';
 import { UpdateProjectMemberRoleDto } from './dto/update-member-role.dto';
+import { AskQuestionDto } from './dto/ask-question.dto';
 
 @ApiTags('projects')
 @Controller('projects')
@@ -90,6 +91,26 @@ export class ProjectController {
   @ApiOperation({ summary: 'Get all projects for team' })
   findByTeam(@Param('teamId') teamId: string) {
     return this.projectService.findByTeam(teamId);
+  }
+
+  @Get(':id/:node_name')
+  @ApiOperation({ summary: 'Get node data from project meta_data.json' })
+  getNodeData(@Param('id') id: string, @Param('node_name') nodeName: string) {
+    return this.projectService.getNodeData(id, nodeName);
+  }
+
+  @Post(':id/:node_name/question')
+  @ApiOperation({ summary: 'Ask AI a question about a specific node' })
+  askNodeQuestion(
+    @Param('id') id: string,
+    @Param('node_name') nodeName: string,
+    @Body() askQuestionDto: AskQuestionDto,
+  ) {
+    return this.projectService.askNodeQuestion(
+      id,
+      nodeName,
+      askQuestionDto.content,
+    );
   }
 
   @Get(':id')

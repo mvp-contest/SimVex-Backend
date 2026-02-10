@@ -38,6 +38,10 @@ export class UploadService {
     return `${this.cdnUrl}/${fileName}`;
   }
 
+  getFolderUrl(folder: string): string {
+    return `${this.cdnUrl}/${folder}`;
+  }
+
   async uploadGlbFiles(
     glbFiles: Express.Multer.File[],
     projectId: string,
@@ -52,24 +56,39 @@ export class UploadService {
     return `${this.cdnUrl}/${folder}`;
   }
 
+  async uploadFileWithOriginalName(
+    file: Express.Multer.File,
+    folder: string,
+  ): Promise<string> {
+    const fileName = `${folder}/${file.originalname}`;
+
+    await this.s3Client.send(
+      new PutObjectCommand({
+        Bucket: this.bucketName,
+        Key: fileName,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+      }),
+    );
+
+    return `${this.cdnUrl}/${fileName}`;
+  }
+
   async uploadProjectFiles(
     glbFiles: Express.Multer.File[],
     metaData: Express.Multer.File,
     projectId: string,
-  ): Promise<{ modelFolderUrl: string; jsonFileUrl: string }> {
+  ): Promise<string> {
     const folder = `projects/${projectId}`;
 
     const uploadPromises = glbFiles.map((file) =>
       this.uploadFile(file, folder),
     );
 
-    const jsonFilePromise = this.uploadFile(metaData, folder);
+    const jsonFilePromise = this.uploadFileWithOriginalName(metaData, folder);
 
     await Promise.all([...uploadPromises, jsonFilePromise]);
 
-    const modelFolderUrl = `${this.cdnUrl}/${folder}`;
-    const jsonFileUrl = await jsonFilePromise;
-
-    return { modelFolderUrl, jsonFileUrl };
+    return `${this.cdnUrl}/${folder}`;
   }
 }
