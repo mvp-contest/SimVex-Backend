@@ -8,7 +8,10 @@ import {
   Delete,
   UseInterceptors,
   UploadedFiles,
+  Res,
 } from '@nestjs/common';
+import type { Response } from 'express';
+import type { Readable } from 'stream';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { ApiTags, ApiOperation, ApiConsumes } from '@nestjs/swagger';
@@ -87,6 +90,23 @@ export class ProjectController {
   @ApiOperation({ summary: 'Get project file URLs' })
   getFiles(@Param('id') id: string) {
     return this.projectService.getFiles(id);
+  }
+
+  @Get(':id/files/:fileName')
+  @ApiOperation({ summary: 'Get a specific file from project' })
+  async getFile(
+    @Param('id') id: string,
+    @Param('fileName') fileName: string,
+    @Res() res: Response,
+  ) {
+    const file = await this.projectService.getFile(id, fileName);
+
+    res.set({
+      'Content-Type': file.contentType || 'application/octet-stream',
+      'Content-Length': file.contentLength?.toString(),
+    });
+
+    (file.body as Readable).pipe(res);
   }
 
   @Get('user/:userId')

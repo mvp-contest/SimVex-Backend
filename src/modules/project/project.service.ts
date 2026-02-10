@@ -106,14 +106,34 @@ export class ProjectService {
   }
 
   async getFiles(projectId: string) {
-    return this.prisma.project.findUnique({
+    const project = await this.prisma.project.findUnique({
       where: { id: projectId },
       select: {
         id: true,
         name: true,
-        folderUrl: true,
       },
     });
+
+    if (!project) {
+      throw new NotFoundException('Project not found');
+    }
+
+    const files = await this.uploadService.listFiles(`projects/${projectId}`);
+
+    return { ...project, files };
+  }
+
+  async getFile(projectId: string, fileName: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+    });
+
+    if (!project) {
+      throw new NotFoundException('Project not found');
+    }
+
+    const key = `projects/${projectId}/${fileName}`;
+    return this.uploadService.getFile(key);
   }
 
   async getNodeData(projectId: string, nodeName: string) {

@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  ListObjectsV2Command,
+  GetObjectCommand,
+} from '@aws-sdk/client-s3';
 import { ConfigService } from '@nestjs/config';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -77,6 +82,34 @@ export class UploadService {
     );
 
     return `${this.cdnUrl}/${fileName}`;
+  }
+
+  async getFile(key: string) {
+    const result = await this.s3Client.send(
+      new GetObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+      }),
+    );
+
+    return {
+      body: result.Body,
+      contentType: result.ContentType,
+      contentLength: result.ContentLength,
+    };
+  }
+
+  async listFiles(folder: string): Promise<string[]> {
+    const result = await this.s3Client.send(
+      new ListObjectsV2Command({
+        Bucket: this.bucketName,
+        Prefix: folder,
+      }),
+    );
+
+    return (result.Contents ?? []).map(
+      (object) => object.Key!.split('/').pop()!,
+    );
   }
 
   async uploadProjectFiles(
