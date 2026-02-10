@@ -12,14 +12,16 @@ export class UploadService {
   constructor(private configService: ConfigService) {
     this.s3Client = new S3Client({
       region: 'auto',
-      endpoint: this.configService.get('R2_ENDPOINT'),
+      endpoint: this.configService.get<string>('R2_ENDPOINT'),
       credentials: {
-        accessKeyId: this.configService.get('R2_ACCESS_KEY_ID'),
-        secretAccessKey: this.configService.get('R2_SECRET_ACCESS_KEY'),
+        accessKeyId: this.configService.get<string>('R2_ACCESS_KEY_ID')!,
+        secretAccessKey: this.configService.get<string>(
+          'R2_SECRET_ACCESS_KEY',
+        )!,
       },
     });
-    this.bucketName = this.configService.get('R2_BUCKET_NAME');
-    this.cdnUrl = this.configService.get('CDN_URL');
+    this.bucketName = this.configService.get<string>('R2_BUCKET_NAME')!;
+    this.cdnUrl = this.configService.get<string>('CDN_URL')!;
   }
 
   async uploadFile(file: Express.Multer.File, folder: string): Promise<string> {
